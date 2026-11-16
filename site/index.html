@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bila Derma</title>
+  <meta name="description" content="Find the week your blood donation is needed most, using Ministry of Health open data and a tested forecast.">
+  <meta name="theme-color" content="#EEF2EF">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3C16 3 6 15 6 21a10 10 0 0 0 20 0C26 15 16 3 16 3z' fill='%238E1B2E'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Noto+Sans:wght@400;600&family=Noto+Sans+Tamil:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#ask" data-i18n="form_heading">Minggu anda</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <p class="brand"><svg aria-hidden="true" viewBox="0 0 32 32" class="drop"><path d="M16 3C16 3 6 15 6 21a10 10 0 0 0 20 0C26 15 16 3 16 3z"/></svg>Bila Derma</p>
+      <div class="langs" role="group" aria-labelledby="lang-label">
+        <span id="lang-label" class="sr" data-i18n="lang_label">Bahasa</span>
+      </div>
+    </div>
+    <div class="wrap">
+      <h1 class="tagline" data-i18n="tagline">Cari minggu derma darah anda paling diperlukan.</h1>
+    </div>
+  </header>
+
+  <main>
+    <section id="ask" class="wrap ask" aria-labelledby="ask-h">
+      <h2 id="ask-h" class="sr" data-i18n="legend_pick">Minggu anda</h2>
+      <div class="answer" id="answer" aria-live="polite">
+        <p class="answer-h" id="answer-h"></p>
+        <p class="answer-why" id="answer-why"></p>
+        <p class="answer-note" id="answer-hol"></p>
+        <div class="actions" id="actions">
+          <button type="button" class="btn primary" id="btn-ics" data-i18n="add_calendar">Tambah ke kalendar</button>
+          <button type="button" class="btn" id="btn-share" data-i18n="share">Kongsi</button>
+          <span class="toast" id="toast" role="status"></span>
+        </div>
+        <p class="answer-note" data-i18n="eligibility"></p>
+      </div>
+      <form id="form" class="form" novalidate>
+        <p class="form-h" data-i18n="form_heading"></p>
+        <fieldset class="field">
+          <legend data-i18n="blood_group">Kumpulan darah</legend>
+          <div class="pills" id="types"></div>
+        </fieldset>
+        <div class="field-row">
+          <label class="field">
+            <span data-i18n="area">Negeri</span>
+            <select id="area"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="last_donation">Tarikh derma terakhir</span>
+            <input type="date" id="last" aria-describedby="last-hint">
+          </label>
+          <label class="field">
+            <span data-i18n="interval">Selang derma</span>
+            <select id="interval"></select>
+          </label>
+        </div>
+        <p id="last-hint" class="hint" data-i18n="last_hint"></p>
+      </form>
+
+    </section>
+
+    <section class="wrap tide" aria-labelledby="tide-h">
+      <h2 id="tide-h"></h2>
+      <figure class="chart">
+        <svg id="chart" role="img" aria-labelledby="chart-desc"></svg>
+        <figcaption>
+          <ul class="legend" id="legend"></ul>
+          <p id="chart-desc" class="hint" data-i18n="chart_note"></p>
+          <p id="chart-detail" class="detail" aria-live="polite"></p>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="wrap pulse" aria-labelledby="pulse-h">
+      <h2 id="pulse-h" data-i18n="pulse_heading"></h2>
+      <p class="hint" data-i18n="pulse_intro"></p>
+      <dl id="pulse" class="pulse-list"></dl>
+    </section>
+
+    <section class="wrap prose" aria-labelledby="why-h">
+      <h2 id="why-h" data-i18n="why_heading"></h2>
+      <p data-i18n="why_p1"></p>
+      <p id="why-p2"></p>
+    </section>
+
+    <section class="wrap prose" aria-labelledby="trust-h">
+      <h2 id="trust-h" data-i18n="trust_heading"></h2>
+      <p id="trust-p1"></p>
+      <p id="trust-p2"></p>
+      <h3 data-i18n="examples_heading"></h3>
+      <div class="table-wrap"><table id="examples"></table></div>
+      <h3 data-i18n="limits_heading"></h3>
+      <ul id="limits" class="limits"></ul>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <p id="asof"></p>
+    <p data-i18n="footer_source"></p>
+    <p><a href="https://pdn.gov.my/" rel="noopener" data-i18n="footer_find"></a></p>
+    <p><a href="https://github.com/ShermaineYap/bila-derma" id="code-link" rel="noopener" data-i18n="footer_code"></a></p>
+    <p data-i18n="footer_privacy"></p>
+  </footer>
+
+  <p class="wrap error" id="error" hidden></p>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

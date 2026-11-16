@@ -1,0 +1,75 @@
+name: Refresh forecast and deploy
+
+on:
+  schedule:
+    # 03:30 UTC = 11:30 MYT, after data.gov.my publishes the previous day's data (~10:00 MYT)
+    - cron: "30 3 * * *"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pipeline/requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Test
+        run: |
+          python -m pytest pipeline/tests -q
+          node --test tests/logic.test.mjs
+
+      - name: Download data, train, backtest, write JSON
+        if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip refresh]')
+        run: python pipeline/build.py
+
+      - name: Commit refreshed data
+        if: github.event_name != 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data
+          if git diff --cached --quiet; then
+            echo "No data changes"
+          else
+            git commit -m "Refresh data to $(python -c 'import json;print(json.load(open("site/data/meta.json"))["data_as_of"])') [skip ci]"
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
