@@ -65,3 +65,14 @@ def test_make_rows_has_no_future_leakage():
 def test_metrics():
     assert build.mape([100, 200], [110, 180]) == 10.0
     assert round(build.wape([100, 300], [110, 270]), 6) == 10.0
+
+
+def test_heatmap_layout():
+    daily = build.to_daily_wide(_toy_daily())
+    h = build.heatmap(daily, first_year=2025)
+    assert h["years"] == [2025, 2026]
+    assert all(len(v) == 53 for v in h["cells"].values())
+    # Constant toy data: every filled week is at the usual level.
+    vals = [x for v in h["cells"].values() for x in v if x is not None]
+    assert vals and max(abs(x) for x in vals) < 1e-6
+    assert 12 in h["marks"]["raya"]["2026"]          # Hari Raya 21 Mar 2026 is ISO week 12

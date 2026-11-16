@@ -11,6 +11,9 @@ It runs entirely on GitHub: a scheduled GitHub Action downloads the data each mo
 - **Your week.** Choose blood group, state and last donation date. The app works out when you can give again and recommends the week, within the next 8 weeks of that date, where donations are forecast to be furthest below usual. If that week is full of public holidays (when centres may close), it suggests the week before instead. Add it to your calendar or share it.
 - **The next 16 weeks.** A chart of the past 12 weeks and the 16-week forecast, each compared with the usual level, with an 80% range.
 - **Right now.** Donations over the last 4 weeks against the past 12 months, nationally, for your state and for your blood group.
+- **Live state map.** A tile map of Malaysia coloured by how each state's donations compare with its usual level. Tap a state to select it.
+- **Donor poster (computer vision).** Take a selfie and [MediaPipe Selfie Segmentation](https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter) cuts you out of the background in the browser and places you on a shareable poster with your week and your state's forecast. The photo is processed on the device and never uploaded. PDN wants more young regular donors; a poster people actually want to post is a recruitment tool.
+- **18 years in one picture.** A heatmap of every week since 2009. Because Ramadan arrives about 11 days earlier each year, its dip draws a diagonal stripe across the years; the 2020 Movement Control Order shows as a deep red block.
 - **Four languages.** Bahasa Melayu, English, Chinese and Tamil.
 
 ## How accurate is it?
@@ -43,6 +46,7 @@ These figures are regenerated every day and published in `site/data/meta.json`.
 - Festive dates for 2027 are estimates until officially announced.
 - Some week-to-week drops reflect centres closing on public holidays, not fewer willing donors. That is why the app suggests the week before a holiday-heavy dip.
 - The app does not decide whether anyone is eligible to donate. Staff at the donation centre confirm that on the day.
+- The selfie segmenter is tuned for one or two people close to the camera; group photos and distant shots cut out less cleanly. The MediaPipe runtime is about 15 MB and loads only when someone adds a photo.
 - Chinese and Tamil text was written with AI assistance and should be reviewed by native speakers.
 - This is an independent student project, not an official service of the Ministry of Health or the National Blood Centre.
 
@@ -69,7 +73,7 @@ node --test tests/logic.test.mjs
 
 ## Built with
 
-Python, pandas, scikit-learn, vanilla JavaScript and SVG. Built with AI assistance (Claude) for code and translations. The data analysis, backtest numbers and limitations above are produced by the pipeline in this repository.
+Python, pandas, scikit-learn, vanilla JavaScript and SVG, MediaPipe Tasks Vision 1.2.3 (loaded from jsDelivr) with Google's `selfie_segmenter.tflite` model (Apache 2.0, stored in `site/models/`). Built with AI assistance (Claude) for code and translations. The data analysis, backtest numbers and limitations above are produced by the pipeline in this repository.
 
 ## Licence
 

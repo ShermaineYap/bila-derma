@@ -77,16 +77,41 @@
       </figure>
     </section>
 
-    <section class="wrap pulse" aria-labelledby="pulse-h">
-      <h2 id="pulse-h" data-i18n="pulse_heading"></h2>
-      <p class="hint" data-i18n="pulse_intro"></p>
+    <section class="wrap pulse" aria-labelledby="map-h">
+      <h2 id="map-h" data-i18n="map_heading"></h2>
+      <p class="hint" data-i18n="map_note"></p>
+      <div class="tilemap" id="tilemap"></div>
+      <div class="scale" aria-hidden="true"><span data-i18n="scale_low"></span><i class="scale-bar"></i><span data-i18n="scale_high"></span></div>
       <dl id="pulse" class="pulse-list"></dl>
+    </section>
+
+    <section class="wrap poster" aria-labelledby="poster-h">
+      <h2 id="poster-h" data-i18n="poster_heading"></h2>
+      <p class="hint poster-note" data-i18n="poster_note"></p>
+      <div class="poster-grid">
+        <canvas id="poster" class="poster-canvas" role="img"></canvas>
+        <div class="poster-side">
+          <label class="btn primary file-btn">
+            <input type="file" id="poster-file" accept="image/*" capture="user">
+            <span data-i18n="poster_photo"></span>
+          </label>
+          <button type="button" class="btn" id="poster-remove" data-i18n="poster_remove" hidden></button>
+          <button type="button" class="btn" id="poster-download" data-i18n="poster_download"></button>
+          <button type="button" class="btn" id="poster-share" data-i18n="poster_share"></button>
+          <p class="poster-status" id="poster-status" role="status"></p>
+        </div>
+      </div>
     </section>
 
     <section class="wrap prose" aria-labelledby="why-h">
       <h2 id="why-h" data-i18n="why_heading"></h2>
       <p data-i18n="why_p1"></p>
       <p id="why-p2"></p>
+      <h3 id="heat-h"></h3>
+      <div class="heat-wrap"><svg id="heatmap" role="img" aria-labelledby="heat-note"></svg></div>
+      <ul class="legend" id="heat-legend"></ul>
+      <p class="hint" id="heat-note" data-i18n="heat_note"></p>
+      <p class="detail" id="heat-detail" aria-live="polite"></p>
     </section>
 
     <section class="wrap prose" aria-labelledby="trust-h">

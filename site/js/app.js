@@ -1,12 +1,14 @@
 import { T, LANGS, LOCALES, fill } from "./i18n.js";
 import { parseDate, isoDate, nextEligible, pickWeek, describePct, buildIcs, pastVsUsual, range } from "./logic.js";
+import { renderTileMap, renderHeatmap, pctColor } from "./viz.js";
+import { drawPoster, fileToCanvas, cutOut, loadSegmenter } from "./poster.js";
 
 const TYPES = ["all", "o", "a", "b", "ab"];
 const PAST_WEEKS = 12;
 const STORE_KEY = "bila-derma";
 const $ = (id) => document.getElementById(id);
 
-const state = { lang: "ms", type: "all", area: "Malaysia", last: "", interval: 3, data: null, pick: null };
+const state = { lang: "ms", type: "all", area: "Malaysia", last: "", interval: 3, data: null, pick: null, cut: null };
 
 // ------------------------------------------------------------------ storage (best effort)
 function loadPrefs() {
@@ -123,6 +125,10 @@ function bindForm() {
   $("form").addEventListener("submit", (e) => e.preventDefault());
   $("btn-ics").addEventListener("click", downloadIcs);
   $("btn-share").addEventListener("click", share);
+  $("poster-file").addEventListener("change", onPosterFile);
+  $("poster-remove").addEventListener("click", () => { state.cut = null; posterStatus(""); renderPoster(); });
+  $("poster-download").addEventListener("click", downloadPoster);
+  $("poster-share").addEventListener("click", sharePoster);
 }
 
 // ------------------------------------------------------------------ series selection
@@ -404,19 +410,119 @@ function renderResults(animate = false) {
   renderAnswer();
   renderChart(animate);
   renderPulse();
+  renderMap();
+  renderPoster();
 }
 function renderAll() {
   applyText();
   renderResults();
   renderProse();
+  renderHeat();
+}
+
+// ------------------------------------------------------------------ map
+function renderMap() {
+  renderTileMap($("tilemap"), {
+    pulse: state.data.pulse, selected: state.area, nameOf: areaName, pctText: pctWords, noData: t().no_data,
+    onPick: (area) => {
+      state.area = area; $("area").value = area; savePrefs(); renderResults();
+      document.getElementById("ask").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    },
+  });
+}
+
+// ------------------------------------------------------------------ heatmap
+function renderHeat() {
+  const heat = state.data.heat;
+  $("heat-h").textContent = fill(t().heat_heading, { n: heat.years.length });
+  const months = [...Array(12)].map((_, m) => new Intl.DateTimeFormat(loc(), { month: "short" }).format(new Date(2026, m, 15)));
+  renderHeatmap($("heatmap"), {
+    data: heat, monthNames: months,
+    onDetail: (txt) => { $("heat-detail").textContent = txt; },
+    cellLabel: (year, week, pct, f) => fill(t().heat_cell, { year, week, pct: pctWords(pct),
+      fest: f.raya ? festSuffix("raya") : f.cny ? festSuffix("cny") : f.ramadan ? festSuffix("ramadan") : "" }),
+  });
+  $("heat-detail").textContent = t().heat_hint;
+  const lg = $("heat-legend");
+  lg.innerHTML = "";
+  const items = [
+    [`<i style="background:${pctColor(-35)}"></i>`, t().scale_low],
+    [`<i style="background:${pctColor(30)}"></i>`, t().scale_high],
+    ['<i class="dot" style="background:#E9BE4C"></i>', t().fest.ramadan],
+    ['<i class="ring" style="border-color:#E9BE4C"></i>', t().fest.raya],
+    ['<i class="dot ring" style="border-color:#1C2633"></i>', t().fest.cny],
+  ];
+  for (const [sw, label] of items) { const li = document.createElement("li"); li.innerHTML = sw; li.append(label); lg.appendChild(li); }
+}
+
+// ------------------------------------------------------------------ poster
+function posterText() {
+  const p = state.pick;
+  const base = { brand: "Bila Derma", cta: t().poster_cta, url: pageUrl().replace(/^https?:\/\//, "").replace(/\/$/, ""),
+    fontDisplay: '"Bricolage Grotesque", "Noto Sans", sans-serif', fontBody: '"Noto Sans", "Noto Sans Tamil", "PingFang SC", "Microsoft YaHei", sans-serif' };
+  const fc = currentSeries().forecast;
+  if (p?.status !== "ok") {
+    return { ...base, head: t().poster_head_generic, week: "", why: "", bars: fc.map((f) => ({ pct: f.vs_usual_pct, pick: false })) };
+  }
+  const { weeks } = state.data.forecast;
+  const w = weeks[p.index];
+  const dipIdx = p.reason === "before_holiday" ? p.dipIndex : p.index;
+  return { ...base, head: t().poster_head,
+    week: fill(t().poster_week, { range: fmtRange(w.week_start, w.week_end, true) }),
+    why: fill(t().poster_why, { area: areaName(state.area), pct: pctWords(fc[dipIdx].vs_usual_pct), fest: festSuffix(weeks[dipIdx].festive) }),
+    bars: fc.map((f, i) => ({ pct: f.vs_usual_pct, pick: i === p.index })) };
+}
+function renderPoster() {
+  const c = $("poster");
+  drawPoster(c, { ...posterText(), cut: state.cut });
+  c.setAttribute("aria-label", `${t().poster_alt}: ${posterText().head} ${posterText().week}`);
+  $("poster-remove").hidden = !state.cut;
+}
+function posterStatus(msg) { $("poster-status").textContent = msg || ""; }
+
+async function onPosterFile(e) {
+  const file = e.target.files?.[0];
+  e.target.value = "";
+  if (!file) return;
+  try {
+    posterStatus(t().poster_loading);
+    await loadSegmenter();
+    posterStatus(t().poster_working);
+    const src = await fileToCanvas(file);
+    const cut = await cutOut(src);
+    if (!cut.bbox || cut.coverage < 0.03) { posterStatus(t().poster_noperson); return; }
+    state.cut = cut;
+    renderPoster();
+    posterStatus(t().poster_done);
+  } catch (err) {
+    console.warn("poster", err);
+    posterStatus(t().poster_error);
+  }
+}
+function posterBlob() { return new Promise((res) => $("poster").toBlob(res, "image/png")); }
+async function downloadPoster() {
+  const blob = await posterBlob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "bila-derma-poster.png";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+async function sharePoster() {
+  const blob = await posterBlob();
+  const file = new File([blob], "bila-derma-poster.png", { type: "image/png" });
+  try {
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text: shareMessage() }); return; }
+  } catch (e) { if (e?.name === "AbortError") return; }
+  await downloadPoster();
 }
 
 async function boot() {
   loadPrefs();
   try {
     const get = (f) => fetch(`data/${f}.json`, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(f); return r.json(); });
-    const [meta, pulse, forecast, history] = await Promise.all(["meta", "pulse", "forecast", "history"].map(get));
-    state.data = { meta, pulse, forecast, history };
+    const [meta, pulse, forecast, history, heat] = await Promise.all(["meta", "pulse", "forecast", "history", "heatmap"].map(get));
+    state.data = { meta, pulse, forecast, history, heat };
   } catch {
     document.documentElement.lang = state.lang;
     $("error").hidden = false;
@@ -429,6 +535,8 @@ async function boot() {
   bindForm();
   renderResults(true);
   renderProse();
+  renderHeat();
+  document.fonts?.ready.then(() => renderPoster());
 }
 
 boot();

@@ -23,7 +23,7 @@ import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from calendar_features import FEATURES, festive_label, week_features, week_labels  # noqa: E402
+from calendar_features import FEATURES, festive_dates, festive_label, week_features, week_labels  # noqa: E402
 
 NATIONAL_URL = "https://storage.data.gov.my/healthcare/blood_donations.csv"
 STATE_URL = "https://storage.data.gov.my/healthcare/blood_donations_state.csv"
@@ -320,6 +320,33 @@ def seasonal_profile(weekly: pd.DataFrame, cal: pd.DataFrame) -> list[dict]:
     return out
 
 
+def heatmap(daily: pd.DataFrame, first_year: int = 2009) -> dict:
+    """National weekly donations vs the mean of the previous 52 weeks, laid out as year x ISO week."""
+    s = daily[("Malaysia", "all")].resample("W-SUN").sum()
+    s = s[s.index <= daily.index.max()]
+    usual = s.shift(1).rolling(52, min_periods=52).mean()
+    pct = (s / usual - 1) * 100
+    cal = week_features(s.index)
+    fest = festive_dates(int(s.index[0].year) - 1, int(s.index[-1].year) + 1)
+    years = list(range(first_year, int(s.index[-1].year) + 1))
+    cells = {y: [None] * 53 for y in years}
+    marks = {k: {y: [] for y in years} for k in ("ramadan", "raya", "cny")}
+    for we, v in pct.items():
+        iso = (we - pd.Timedelta(days=3)).isocalendar()      # Thursday decides the ISO year/week
+        y, w = int(iso.year), int(iso.week)
+        if y not in cells or pd.isna(v):
+            continue
+        cells[y][w - 1] = round(float(v), 1)
+        if cal.loc[we, "ramadan"] >= 4:
+            marks["ramadan"][y].append(w)
+        start = (we - pd.Timedelta(days=6)).date()
+        for key in ("raya", "cny"):
+            if any(start <= d <= we.date() for d in fest[key]):
+                marks[key][y].append(w)
+    return {"years": years, "cells": {str(y): c for y, c in cells.items()},
+            "marks": {k: {str(y): v for y, v in d.items()} for k, d in marks.items()}}
+
+
 def main() -> None:
     t0 = time.time()
     out_dir = Path(os.environ.get("OUT_DIR", Path(__file__).resolve().parent.parent / "site" / "data"))
@@ -357,7 +384,8 @@ def main() -> None:
         "backtest": summary,
         "seasonal_profile": seasonal_profile(weekly, cal),
     }
-    files = {"meta.json": meta, "pulse.json": pulse(daily), "forecast.json": fc, "history.json": history(weekly, cal)}
+    files = {"meta.json": meta, "pulse.json": pulse(daily), "forecast.json": fc, "history.json": history(weekly, cal),
+             "heatmap.json": heatmap(daily)}
     for name, obj in files.items():
         (out_dir / name).write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
     bt.drop(columns=["series_name"]).to_csv(out_dir.parent.parent / "pipeline" / "backtest_predictions.csv.gz",
